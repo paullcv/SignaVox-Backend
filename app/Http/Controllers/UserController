@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Validation\ValidationException;
 
 class UserController extends Controller
 {
@@ -15,8 +17,12 @@ class UserController extends Controller
 
     public function show($id)
     {
-        $user = User::findOrFail($id);
-        return view('users.show', compact('user'));
+        try {
+            $user = User::findOrFail($id);
+            return view('users.show', compact('user'));
+        } catch (ModelNotFoundException $e) {
+            return redirect()->route('usuarios.index')->with('error', 'Usuario no encontrado');
+        }
     }
 
     public function create()
@@ -26,55 +32,67 @@ class UserController extends Controller
 
     public function store(Request $request)
     {
-        // Validar la entrada
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-           
-        ]);
+        try {
+            // Validar la entrada
+            $request->validate([
+                'name' => 'required|string|max:255',
+                'email' => 'required|string|email|max:255|unique:users',
+            ]);
 
-        // Crear un nuevo usuario
-        $user = User::create([
-            'name' => $request->input('name'),
-            'email' => $request->input('email'),
-           
-        ]);
+            // Crear un nuevo usuario
+            $user = User::create([
+                'name' => $request->input('name'),
+                'email' => $request->input('email'),
+            ]);
 
-        return redirect()->route('usuarios.show', $user->id)
-                         ->with('success', 'Usuario creado exitosamente');
+            return redirect()->route('usuarios.show', $user->id)->with('success', 'Usuario creado exitosamente');
+        } catch (ValidationException $e) {
+            return redirect()->back()->withErrors($e->errors())->withInput();
+        }
     }
 
     public function edit($id)
     {
-        $user = User::findOrFail($id);
-        return view('users.edit', compact('user'));
+        try {
+            $user = User::findOrFail($id);
+            return view('users.edit', compact('user'));
+        } catch (ModelNotFoundException $e) {
+            return redirect()->route('usuarios.index')->with('error', 'Usuario no encontrado');
+        }
     }
 
     public function update(Request $request, $id)
     {
-        // Validar la entrada
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users,email,' . $id,
-           
-        ]);
+        try {
+            // Validar la entrada
+            $request->validate([
+                'name' => 'required|string|max:255',
+                'email' => 'required|string|email|max:255|unique:users,email,' . $id,
+            ]);
 
-        // Actualizar el usuario
-        $user = User::findOrFail($id);
-        $user->name = $request->input('name');
-        $user->email = $request->input('email');
-        $user->save();
+            // Actualizar el usuario
+            $user = User::findOrFail($id);
+            $user->name = $request->input('name');
+            $user->email = $request->input('email');
+            $user->save();
 
-        return redirect()->route('usuarios.show', $user->id)
-                         ->with('success', 'Usuario actualizado exitosamente');
+            return redirect()->route('usuarios.show', $user->id)->with('success', 'Usuario actualizado exitosamente');
+        } catch (ValidationException $e) {
+            return redirect()->back()->withErrors($e->errors())->withInput();
+        } catch (ModelNotFoundException $e) {
+            return redirect()->route('usuarios.index')->with('error', 'Usuario no encontrado');
+        }
     }
 
     public function destroy($id)
     {
-        $user = User::findOrFail($id);
-        $user->delete();
+        try {
+            $user = User::findOrFail($id);
+            $user->delete();
 
-        return redirect()->route('usuarios.index')
-                         ->with('success', 'Usuario eliminado exitosamente');
+            return redirect()->route('usuarios.index')->with('success', 'Usuario eliminado exitosamente');
+        } catch (ModelNotFoundException $e) {
+            return redirect()->route('usuarios.index')->with('error', 'Usuario no encontrado');
+        }
     }
 }
